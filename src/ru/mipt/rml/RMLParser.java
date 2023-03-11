@@ -19,12 +19,14 @@ import java.util.Map;
 
 public class RMLParser {
 
-    private static final String FILENAME = "/Users/jiangsheng/Documents/rml/00005300-111034.rml";
-    private static final String SPO2_DATA_FILE = "/Users/jiangsheng/Documents/rml/00005300-111034.txt";
+    private static String RML_FILENAME = "";
+    private static String SPO2_DATA_FILE = "";
     private static List<SpO2Event> events = new ArrayList<SpO2Event>();
 
-    public static void main(String[] args) {
-
+    public static void process(String[] args) {
+        RML_FILENAME = args[0];
+        SPO2_DATA_FILE = args[1];
+        
         // Instantiate the Factory
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 
@@ -36,7 +38,7 @@ public class RMLParser {
             // parse XML file
             DocumentBuilder db = dbf.newDocumentBuilder();
 
-            Document doc = db.parse(new File(FILENAME));
+            Document doc = db.parse(new File(RML_FILENAME));
 
             // optional, but recommended
             // http://stackoverflow.com/questions/13786607/normalization-in-dom-parsing-with-java-how-does-it-work
@@ -67,7 +69,7 @@ public class RMLParser {
                         double o2min = Double.parseDouble(element.getElementsByTagName("O2Min").item(0).getFirstChild().getNodeValue());
                         SpO2Event event = new SpO2Event(start, duration, o2Before, o2min);
                         events.add(event);
-                        System.out.println(event);
+                        //System.out.println(event);
                     }
                 }
             }
@@ -117,7 +119,7 @@ public class RMLParser {
                 Element stage = (Element) stages.item(i);
                 String type = stage.getAttribute("Type");
                 String start = stage.getAttribute("Start");
-                System.out.println("Type: " + type + ", Start: " + start);
+                //System.out.println("Type: " + type + ", Start: " + start);
 
                 double startTime = Double.parseDouble(start);
                 double endTime;

@@ -21,13 +21,9 @@
 
 package ru.mipt.edf;
 
-import java.io.Closeable;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import ru.mipt.rml.RMLParser;
+
+import java.io.*;
 import java.text.MessageFormat;
 import java.util.List;
 import java.util.Scanner;
@@ -39,6 +35,7 @@ import javax.swing.UnsupportedLookAndFeelException;
 public class EDF
 {
 	private static EDFParserResult result = null;
+	private static final int SPO2_CHANNEL = 20;
 
 	public static void main(String... args) throws IOException, ClassNotFoundException, InstantiationException,
 			IllegalAccessException, UnsupportedLookAndFeelException
@@ -93,20 +90,34 @@ public class EDF
 		{
 			try
 			{
-				fos = new FileOutputStream(file.getParent() + "/channel/"
-						+ file.getName().replaceAll("[.].*", "_channel_info_" + i + ".txt"));
-				writeChannelData(fos, channelFormat, i);
+				if (i == SPO2_CHANNEL) {
+					fos = new FileOutputStream(file.getParent() + "/channel/"
+							+ file.getName().replaceAll("[.].*", "_channel_info_" + i + ".txt"));
+					writeChannelData(fos, channelFormat, i);
+				}
 			} finally
 			{
 				close(fos);
 			}
 
+			if (i == SPO2_CHANNEL) {
+				String spo2ChannelInfoFile = file.getParent() + "/channel/"
+						+ file.getName().replaceAll("[.].*", "_channel_info_" + i + ".txt");
+				if (isSpo2Channel(spo2ChannelInfoFile)) {
+					System.out.println("Finish parsing spo2 channel info");
+				} else {
+					System.out.println("error: channel 20 is not the spo2");
+				}
+			}
+
 			try
 			{
-				fos = new FileOutputStream(file.getParent() + "/data/"
-						+ file.getName().replaceAll("[.].*", "_" + i + ".txt"));
-				for (int j = 0; j < result.getSignal().getValuesInUnits()[i].length; j++)
-					fos.write((result.getSignal().getValuesInUnits()[i][j] + "\n").getBytes("UTF-8"));
+				if (i == SPO2_CHANNEL) {
+					fos = new FileOutputStream(file.getParent() + "/data/"
+							+ file.getName().replaceAll("[.].*", "_" + i + ".txt"));
+					for (int j = 0; j < result.getSignal().getValuesInUnits()[i].length; j++)
+						fos.write((result.getSignal().getValuesInUnits()[i][j] + "\n").getBytes("UTF-8"));
+				}
 			} finally
 			{
 				close(fos);
@@ -114,6 +125,9 @@ public class EDF
 		}
 
 		System.out.println("Finish parsing file: " + file.getName());
+
+		RMLParser.process(new String[] {file.getParent() + "/" + file.getName().replaceAll("[.].*", ".rml"),
+				file.getParent() + "/data/" + file.getName().replaceAll("[.].*", "_" + SPO2_CHANNEL + ".txt")});
 
 		List<EDFAnnotation> annotations = result.getAnnotations();
 		if (annotations == null || annotations.size() == 0)
@@ -185,5 +199,17 @@ public class EDF
 		{
 			// do nothing
 		}
+	}
+
+	private static boolean isSpo2Channel(String file) {
+		String[] info = new String[]{};
+		try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+			String channelName = br.readLine();
+			info = channelName.split(":");
+
+		} catch (IOException e) {
+			System.err.format("IOException: %s%n", e);
+		}
+		return "SpO2".equals(info[info.length - 1].trim());
 	}
 }
