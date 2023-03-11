@@ -13,11 +13,14 @@ import javax.xml.parsers.ParserConfigurationException;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class RMLParser {
 
-    private static final String FILENAME = "/Users/jiangsheng/Documents/rml/00005295-111034.rml";
+    private static final String FILENAME = "/Users/jiangsheng/Documents/rml/00005300-111034.rml";
+    private static final String SPO2_DATA_FILE = "/Users/jiangsheng/Documents/rml/00005300-111034.txt";
     private static List<SpO2Event> events = new ArrayList<SpO2Event>();
 
     public static void main(String[] args) {
@@ -26,7 +29,6 @@ public class RMLParser {
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 
         try {
-
             // optional, but recommended
             // process XML securely, avoid attacks like XML External Entities (XXE)
             dbf.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
@@ -58,11 +60,11 @@ public class RMLParser {
                     String id = element.getAttribute("Family");
 
                     if (id.equals("SpO2")) {
-                        int start = Integer.parseInt(element.getAttribute("Start"));
-                        int duration = Integer.parseInt(element.getAttribute("Duration"));
+                        double start = Double.parseDouble(element.getAttribute("Start"));
+                        double duration = Double.parseDouble(element.getAttribute("Duration"));
 
-                        int o2Before = Integer.parseInt(element.getElementsByTagName("O2Before").item(0).getFirstChild().getNodeValue());
-                        int o2min = Integer.parseInt(element.getElementsByTagName("O2Min").item(0).getFirstChild().getNodeValue());
+                        double o2Before = Double.parseDouble(element.getElementsByTagName("O2Before").item(0).getFirstChild().getNodeValue());
+                        double o2min = Double.parseDouble(element.getElementsByTagName("O2Min").item(0).getFirstChild().getNodeValue());
                         SpO2Event event = new SpO2Event(start, duration, o2Before, o2min);
                         events.add(event);
                         System.out.println(event);
@@ -72,18 +74,104 @@ public class RMLParser {
 
             System.out.println("SpO2 Events number: " + events.size());
 
-            NodeList stagingData = doc.getElementsByTagName("Stage");
+            /*
+            Element userStaging = (Element) doc.getElementsByTagName("UserStaging").item(0);
 
-            for (int temp = 0; temp < stagingData.getLength(); temp++) {
-                Node node = stagingData.item(temp);
+            // Get the NeuroAdultAASMStaging element within the UserStaging element
+            Element neuroAdultAASMStaging = (Element) userStaging.getElementsByTagName("NeuroAdultAASMStaging").item(0);
 
-                Element element = (Element) node;
-                int start = Integer.parseInt(element.getAttribute("Start"));
-                String type = element.getAttribute("Type");
+            // Get the list of Stage elements within the NeuroAdultAASMStaging element
+            NodeList stages = neuroAdultAASMStaging.getElementsByTagName("Stage");
 
-                StagingData data = new StagingData(start, type);
-                System.out.println(data);
+            // Loop through the list of Stage elements and print the attributes
+            for (int i = 0; i < stages.getLength(); i++) {
+                Element stage = (Element) stages.item(i);
+                String type = stage.getAttribute("Type");
+                String start = stage.getAttribute("Start");
+                System.out.println("Type: " + type + ", Start: " + start);
             }
+            */
+
+            Element userStaging = (Element) doc.getElementsByTagName("UserStaging").item(0);
+
+            // Get the NeuroAdultAASMStaging element within the UserStaging element
+            Element neuroAdultAASMStaging = (Element) userStaging.getElementsByTagName("NeuroAdultAASMStaging").item(0);
+
+            // Get the list of Stage elements within the NeuroAdultAASMStaging element
+            NodeList stages = neuroAdultAASMStaging.getElementsByTagName("Stage");
+
+            Map<String, List<DoubleInterval>> stageToInterval = new HashMap<>();
+            Map<String, Double> stageTotalTime = new HashMap<>() {{
+                put("Wake", 0.0);
+                put("NonREM1", 0.0);
+                put("NonREM2", 0.0);
+                put("NonREM3", 0.0);
+                put("REM", 0.0);
+                put("Total", 0.0);
+            }};
+            Element duration = (Element) doc.getElementsByTagName("Duration").item(0);
+            double endFinal = Double.parseDouble(duration.getTextContent());
+
+            // Loop through the list of Stage elements and print the attributes
+            for (int i = 0; i < stages.getLength(); i++) {
+                Element stage = (Element) stages.item(i);
+                String type = stage.getAttribute("Type");
+                String start = stage.getAttribute("Start");
+                System.out.println("Type: " + type + ", Start: " + start);
+
+                double startTime = Double.parseDouble(start);
+                double endTime;
+                if (i + 1 < stages.getLength()) {
+                    Element nextStage = (Element) stages.item(i + 1);
+                    endTime = Double.parseDouble(nextStage.getAttribute("Start")) - 1;
+                } else {
+                    endTime = endFinal;
+                }
+                DoubleInterval interval = new DoubleInterval(startTime, endTime);
+                stageToInterval.computeIfAbsent(type, x -> new ArrayList<DoubleInterval>()).add(interval);
+
+                stageTotalTime.put(type, stageTotalTime.get(type) + endTime - startTime);
+                if (!type.equals("Wake")) {
+                    stageTotalTime.put("Total", stageTotalTime.get(type) + endTime - startTime);
+                }
+            }
+            System.out.println("Finish building stage to interval map");
+
+            Map<String, List<SpO2Event>> stageToEvents = new HashMap<>();
+            Map<String, Double> stageToArea = new HashMap<>() {{
+                put("NonREM1", 0.0);
+                put("NonREM2", 0.0);
+                put("NonREM3", 0.0);
+                put("REM", 0.0);
+                put("Total", 0.0);
+            }};
+            outer: for (SpO2Event event : events) {
+                inner: for (Map.Entry<String, List<DoubleInterval>> entry : stageToInterval.entrySet()) {
+                    if (DoubleIntervalChecker.isDoubleInIntervals(event.start, entry.getValue())) {
+                        stageToEvents.computeIfAbsent(entry.getKey(), x -> new ArrayList<>()).add(event);
+                        event.stage = entry.getKey();
+                        break inner;
+                    }
+                }
+
+                if (!event.stage.equals("Wake")) {
+                    double endTime = SpO2EndTimeHelper.endTime(event, SPO2_DATA_FILE);
+                    event.area = (endTime - event.start) / 60 * (event.o2Before - event.o2min) * 0.5;
+
+                    stageToArea.put(event.stage, stageToArea.get(event.stage) + event.area);
+                    stageToArea.put("Total", stageToArea.get(event.stage) + event.area);
+                }
+            }
+
+            double totalHb = stageToArea.get("Total") / stageTotalTime.get("Total");
+            double n1Hb = stageToArea.get("NonREM1") / stageTotalTime.get("NonREM1");
+            double n2Hb = stageToArea.get("NonREM2") / stageTotalTime.get("NonREM2");
+            double n3Hb = stageToArea.get("NonREM3") / stageTotalTime.get("NonREM3");
+            double rem = stageToArea.get("REM") / stageTotalTime.get("REM");
+
+            System.out.println("Finish building stage to events map");
+
+
 
         } catch (ParserConfigurationException | SAXException | IOException e) {
             e.printStackTrace();

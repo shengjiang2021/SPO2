@@ -1,12 +1,14 @@
 package ru.mipt.rml;
 
 public class SpO2Event {
-    public int start;
-    public int duration;
-    public int o2Before;
-    public int o2min;
+    public double start;
+    public double duration;
+    public double o2Before;
+    public double o2min;
+    public String stage;
+    public double area;
 
-    public SpO2Event(int start, int duration, int o2Before, int o2min) {
+    public SpO2Event(double start, double duration, double o2Before, double o2min) {
         this.start = start;
         this.duration = duration;
         this.o2Before = o2Before;
