@@ -55,6 +55,8 @@ public class EDF
 		} else
 			file = new File(args[0]);
 
+		System.out.println("Start processing file: " + file.getName());
+
 		new File(file.getParent() + "/data").getAbsoluteFile().mkdir();
 
 		InputStream is = null;
@@ -75,6 +77,9 @@ public class EDF
 		}
 		String channelFormat = null;
 		format = null;
+
+		new File(file.getParent() + "/channel").getAbsoluteFile().mkdir();
+
 		try
 		{
 			format = EDFParser.class.getResourceAsStream("channel_info.format");
@@ -88,7 +93,7 @@ public class EDF
 		{
 			try
 			{
-				fos = new FileOutputStream(file.getParent() + "/"
+				fos = new FileOutputStream(file.getParent() + "/channel/"
 						+ file.getName().replaceAll("[.].*", "_channel_info_" + i + ".txt"));
 				writeChannelData(fos, channelFormat, i);
 			} finally
@@ -107,6 +112,9 @@ public class EDF
 				close(fos);
 			}
 		}
+
+		System.out.println("Finish parsing file: " + file.getName());
+
 		List<EDFAnnotation> annotations = result.getAnnotations();
 		if (annotations == null || annotations.size() == 0)
 			return;
