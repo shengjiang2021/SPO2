@@ -8,25 +8,25 @@ public class SpO2EndTimeHelper {
     public static double endTime(SpO2Event event, String filePath) {
         int endTimeUsing92 = 0;
         int endTimeUsingHalfRecover = 0;
-        int endTimeUsingHalfDuration = (int) (event.start + event.duration / 2);
+        int endTimeUsingHalfDuration = (int) (event.start + event.duration) + (int) (event.duration / 2);
 
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
             // skip lines before the starting line
-            for (int i = 0; i < event.start - 1; i++) {
+            for (int i = 0; i < event.start + event.duration - 1; i++) {
                 br.readLine();
             }
 
             // read the file line by line
-            double halfRecoverThreshold = (event.o2Before - event.o2min) / 2;
+            double halfRecoverThreshold = event.o2min + (event.o2Before - event.o2min) / 2;
 
             String line;
             for (int i = 0; i < event.duration; i++) {
                 Double current = Double.parseDouble(br.readLine());
-                if (current > 92 && endTimeUsing92 == 0) {
-                    endTimeUsing92 = (int) event.start + i;
+                if (current > 95 && endTimeUsing92 == 0) {
+                    endTimeUsing92 = (int) event.start + (int) event.duration + i;
                 }
                 if (current > halfRecoverThreshold && endTimeUsingHalfRecover == 0) {
-                    endTimeUsingHalfRecover = (int) event.start + i;
+                    endTimeUsingHalfRecover = (int) event.start + (int) event.duration + i;
                 }
             }
         } catch (IOException e) {
