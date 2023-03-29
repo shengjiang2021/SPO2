@@ -36,6 +36,7 @@ public class EDF
 {
 	private static EDFParserResult result = null;
 	private static final int SPO2_CHANNEL = 20;
+	private static boolean reachEnd = false;
 
 	public static void main(String... args) throws IOException, ClassNotFoundException, InstantiationException,
 			IllegalAccessException, UnsupportedLookAndFeelException
@@ -52,9 +53,27 @@ public class EDF
 		} else
 			file = new File(args[0]);
 
-		System.out.println("Start processing file: " + file.getName());
-
 		new File(file.getParent() + "/data").getAbsoluteFile().mkdir();
+		new File(file.getParent() + "/channel").getAbsoluteFile().mkdir();
+
+		String prefix = file.getName().split("\\[")[0];
+		for (int i = 1; !reachEnd && i < 99; i++) {
+			String currentFileName = i < 10 ?
+					file.getParent() + "/" + prefix + "[" + "00" + i + "]" + ".edf" :
+					file.getParent() + "/" + prefix + "[" + "0" + i + "]" + ".edf";
+			processSingleEDF(new File(currentFileName));
+		}
+
+		//combine data files
+		ParseUtils.combineTxtFiles(file.getParent(), prefix);
+
+		RMLParser.process(
+				file.getParent() + "/" + prefix + ".rml",
+				file.getParent() + "/data/" + prefix + ".txt");
+	}
+
+	private static void processSingleEDF(File file) throws IOException {
+		System.out.println("Start processing file: " + file.getName());
 
 		InputStream is = null;
 		FileOutputStream fos = null;
@@ -66,6 +85,10 @@ public class EDF
 			format = EDFParser.class.getResourceAsStream("header.format");
 			result = EDFParser.parseEDF(is);
 			writeHeaderData(fos, getPattern(format));
+		} catch	(FileNotFoundException e) {
+			System.out.println("No such file, all edf file are processed");
+			reachEnd = true;
+			return;
 		} finally
 		{
 			close(is);
@@ -75,7 +98,6 @@ public class EDF
 		String channelFormat = null;
 		format = null;
 
-		new File(file.getParent() + "/channel").getAbsoluteFile().mkdir();
 
 		try
 		{
@@ -125,9 +147,6 @@ public class EDF
 		}
 
 		System.out.println("Finish parsing file: " + file.getName());
-
-		RMLParser.process(new String[] {file.getParent() + "/" + file.getName().replaceAll("[.].*", ".rml"),
-				file.getParent() + "/data/" + file.getName().replaceAll("[.].*", "_" + SPO2_CHANNEL + ".txt")});
 
 		List<EDFAnnotation> annotations = result.getAnnotations();
 		if (annotations == null || annotations.size() == 0)

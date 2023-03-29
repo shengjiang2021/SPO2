@@ -20,8 +20,7 @@
  */
 package ru.mipt.edf;
 
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.util.Arrays;
 
 abstract class ParseUtils
@@ -71,5 +70,28 @@ abstract class ParseUtils
                 T[] result = Arrays.copyOfRange(array, 0, array.length - 1);
                 System.arraycopy(array, i + 1, result, i + 1 - 1, array.length - (i + 1));
                 return result;
+        }
+
+        public static void combineTxtFiles(String fileParent, String prefix) {
+                String inputDirPath = fileParent + "/data";
+                String outputFilePath = inputDirPath + "/" + prefix + ".txt";
+                File inputDir = new File(inputDirPath);
+                File[] inputFiles = inputDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".txt"));
+                Arrays.sort(inputFiles);
+                try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputFilePath))) {
+                        for (File file : inputFiles) {
+                                System.out.println("Combining txt file: " + file.getName());
+                                try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+                                        String line;
+                                        while ((line = reader.readLine()) != null) {
+                                                writer.write(line);
+                                                writer.newLine();
+                                        }
+                                }
+                        }
+                        System.out.println("Successfully combined all text files into one file.");
+                } catch (IOException e) {
+                        System.out.println("Error combining text files: " + e.getMessage());
+                }
         }
 }
