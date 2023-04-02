@@ -6,6 +6,7 @@ public class SpO2Event {
     public double o2Before;
     public double o2min;
     public String stage;
+    public double endTime;
     public double area;
 
     public SpO2Event(double start, double duration, double o2Before, double o2min) {
@@ -22,6 +23,9 @@ public class SpO2Event {
                 ", duration=" + duration +
                 ", o2Before=" + o2Before +
                 ", o2min=" + o2min +
+                ", stage='" + stage + '\'' +
+                ", endTime=" + endTime +
+                ", area=" + area +
                 '}';
     }
 }

@@ -168,6 +168,7 @@ public class RMLParser {
 
                 if (!event.stage.equals("Wake")) {
                     double endTime = SpO2EndTimeHelper.endTime(event, SPO2_DATA_FILE, totalLine);
+                    event.endTime = endTime;
                     event.area = (endTime - event.start) / 60 * (event.o2Before - event.o2min) * 0.5;
 
                     stageToArea.put(event.stage, stageToArea.get(event.stage) + event.area);
@@ -175,6 +176,14 @@ public class RMLParser {
                 }
             }
             System.out.println("Finish building stage to events map");
+
+            System.out.println("Printing all stage events for reference");
+            for (Map.Entry<String, List<SpO2Event>> entry : stageToEvents.entrySet()) {
+                System.out.println("stage: " + entry.getKey());
+                for (SpO2Event event : entry.getValue()) {
+                    System.out.println("  " + event.toString());
+                }
+            }
 
             double totalHb = stageToArea.get("Total") / stageTotalTime.get("Total");
             double n1Hb = stageToArea.get("NonREM1") / stageTotalTime.get("NonREM1");

@@ -10,16 +10,23 @@ public class SpO2EndTimeHelper {
         int endTimeUsingHalfRecover = 0;
         int endTimeUsingHalfDuration = (int) (event.start + event.duration) + (int) (event.duration / 2);
 
+        double backupO2Before = 0;
+        String line = null;
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
             // skip lines before the starting line
             for (int i = 1; i <= event.start + event.duration; i++) {
-                br.readLine();
+                line = br.readLine();
+                if (i == event.start) {
+                    backupO2Before = Double.parseDouble(line);
+                }
             }
 
             // read the file line by line
+            if (event.o2Before == 0.0) {
+                event.o2Before = backupO2Before;
+            }
             double halfRecoverThreshold = event.o2min + (event.o2Before - event.o2min) / 2;
 
-            String line;
             for (int i = 1; i <= event.duration && event.start + event.duration + i <= totalLine; i++) {
                 line = br.readLine();
                 Double current = Double.parseDouble(line);
