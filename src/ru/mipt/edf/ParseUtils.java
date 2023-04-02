@@ -72,12 +72,13 @@ abstract class ParseUtils
                 return result;
         }
 
-        public static void combineTxtFiles(String fileParent, String prefix) {
+        public static int combineTxtFiles(String fileParent, String prefix) {
                 String inputDirPath = fileParent + "/data";
                 String outputFilePath = inputDirPath + "/" + prefix + ".txt";
                 File inputDir = new File(inputDirPath);
                 File[] inputFiles = inputDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".txt"));
                 Arrays.sort(inputFiles);
+                int totalLine = 0;
                 try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputFilePath))) {
                         for (File file : inputFiles) {
                                 System.out.println("Combining txt file: " + file.getName());
@@ -85,13 +86,15 @@ abstract class ParseUtils
                                         String line;
                                         while ((line = reader.readLine()) != null) {
                                                 writer.write(line);
+                                                totalLine++;
                                                 writer.newLine();
                                         }
                                 }
                         }
-                        System.out.println("Successfully combined all text files into one file.");
+                        System.out.println("Successfully combined all text files into one file with lines: " + totalLine);
                 } catch (IOException e) {
                         System.out.println("Error combining text files: " + e.getMessage());
                 }
+                return totalLine;
         }
 }

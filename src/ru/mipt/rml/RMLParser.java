@@ -22,8 +22,9 @@ public class RMLParser {
     private static String RML_FILENAME = "";
     private static String SPO2_DATA_FILE = "";
     private static List<SpO2Event> events = new ArrayList<SpO2Event>();
+    private static List<String> typeFilter = List.of("Wake", "NonREM1", "NonREM2", "NonREM3", "REM", "Total");
 
-    public static void process(String rmlFilePath, String dataFilePath) {
+    public static void process(String rmlFilePath, String dataFilePath, int totalLine) {
         RML_FILENAME = rmlFilePath;
         SPO2_DATA_FILE = dataFilePath;
 
@@ -118,6 +119,10 @@ public class RMLParser {
             for (int i = 0; i < stages.getLength(); i++) {
                 Element stage = (Element) stages.item(i);
                 String type = stage.getAttribute("Type");
+                if (!typeFilter.contains(type)) {
+                    System.out.println("Type: " + type + " is not in the type list, skipping it.");
+                    continue;
+                }
                 String start = stage.getAttribute("Start");
                 //System.out.println("Type: " + type + ", Start: " + start);
 
@@ -156,8 +161,13 @@ public class RMLParser {
                     }
                 }
 
+                if (event.stage == null) {
+                    System.out.println("Spo2 event stage is not in the stage list");
+                    continue;
+                }
+
                 if (!event.stage.equals("Wake")) {
-                    double endTime = SpO2EndTimeHelper.endTime(event, SPO2_DATA_FILE);
+                    double endTime = SpO2EndTimeHelper.endTime(event, SPO2_DATA_FILE, totalLine);
                     event.area = (endTime - event.start) / 60 * (event.o2Before - event.o2min) * 0.5;
 
                     stageToArea.put(event.stage, stageToArea.get(event.stage) + event.area);

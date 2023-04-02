@@ -5,14 +5,14 @@ import java.io.FileReader;
 import java.io.IOException;
 
 public class SpO2EndTimeHelper {
-    public static double endTime(SpO2Event event, String filePath) {
+    public static double endTime(SpO2Event event, String filePath, int totalLine) {
         int endTimeUsing92 = 0;
         int endTimeUsingHalfRecover = 0;
         int endTimeUsingHalfDuration = (int) (event.start + event.duration) + (int) (event.duration / 2);
 
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
             // skip lines before the starting line
-            for (int i = 0; i < event.start + event.duration - 1; i++) {
+            for (int i = 1; i <= event.start + event.duration; i++) {
                 br.readLine();
             }
 
@@ -20,8 +20,9 @@ public class SpO2EndTimeHelper {
             double halfRecoverThreshold = event.o2min + (event.o2Before - event.o2min) / 2;
 
             String line;
-            for (int i = 0; i < event.duration; i++) {
-                Double current = Double.parseDouble(br.readLine());
+            for (int i = 1; i <= event.duration && event.start + event.duration + i <= totalLine; i++) {
+                line = br.readLine();
+                Double current = Double.parseDouble(line);
                 if (current > 95 && endTimeUsing92 == 0) {
                     endTimeUsing92 = (int) event.start + (int) event.duration + i;
                 }

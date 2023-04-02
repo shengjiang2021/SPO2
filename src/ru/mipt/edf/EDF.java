@@ -55,6 +55,7 @@ public class EDF
 
 		new File(file.getParent() + "/data").getAbsoluteFile().mkdir();
 		new File(file.getParent() + "/channel").getAbsoluteFile().mkdir();
+		new File(file.getParent() + "/header").getAbsoluteFile().mkdir();
 
 		String prefix = file.getName().split("\\[")[0];
 		for (int i = 1; !reachEnd && i < 99; i++) {
@@ -65,11 +66,12 @@ public class EDF
 		}
 
 		//combine data files
-		ParseUtils.combineTxtFiles(file.getParent(), prefix);
+		int totalLine = ParseUtils.combineTxtFiles(file.getParent(), prefix);
 
 		RMLParser.process(
 				file.getParent() + "/" + prefix + ".rml",
-				file.getParent() + "/data/" + prefix + ".txt");
+				file.getParent() + "/data/" + prefix + ".txt",
+				totalLine);
 	}
 
 	private static void processSingleEDF(File file) throws IOException {
@@ -81,7 +83,7 @@ public class EDF
 		try
 		{
 			is = new FileInputStream(file);
-			fos = new FileOutputStream(file.getParent() + "/" + file.getName().replaceAll("[.].*", "_header.txt"));
+			fos = new FileOutputStream(file.getParent() + "/header/" + file.getName().replaceAll("[.].*", "_header.txt"));
 			format = EDFParser.class.getResourceAsStream("header.format");
 			result = EDFParser.parseEDF(is);
 			writeHeaderData(fos, getPattern(format));
